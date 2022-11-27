@@ -2,11 +2,17 @@
 // http://localhost:3000/isolated/exercise/06.js
 
 import * as React from 'react'
+
 // 🐨 you'll want the following additional things from '../pokemon':
 // fetchPokemon: the function we call to get the pokemon info
 // PokemonInfoFallback: the thing we show while we're loading the pokemon info
 // PokemonDataView: the stuff we use to display the pokemon info
-import {PokemonForm} from '../pokemon'
+import {
+  fetchPokemon,
+  PokemonDataView,
+  PokemonForm,
+  PokemonInfoFallback,
+} from '../pokemon'
 
 function PokemonInfo({pokemonName}) {
   // 🐨 Have state for the pokemon (null)
@@ -24,9 +30,36 @@ function PokemonInfo({pokemonName}) {
   //   1. no pokemonName: 'Submit a pokemon'
   //   2. pokemonName but no pokemon: <PokemonInfoFallback name={pokemonName} />
   //   3. pokemon: <PokemonDataView pokemon={pokemon} />
+  const [pokemon, setPokemon] = React.useState(null)
+  const [error, setError] = React.useState(null)
 
-  // 💣 remove this
-  return 'TODO'
+  React.useEffect(() => {
+    if (!pokemonName) {
+      return
+    }
+    setPokemon(null)
+    setError(null)
+    fetchPokemon(pokemonName).then(
+      pokemon => setPokemon(pokemon),
+      error => setError(error),
+    )
+  }, [pokemonName])
+
+  if (error) {
+    console.log(error)
+    return (
+      <div role="alert">
+        There was an error:{' '}
+        <pre style={{whiteSpace: 'normal'}}>{error.message}</pre>
+      </div>
+    )
+  } else if (!pokemonName) {
+    return 'Submit a pokemon'
+  } else if (!pokemon) {
+    return <PokemonInfoFallback name={pokemonName} />
+  } else {
+    return <PokemonDataView pokemon={pokemon} />
+  }
 }
 
 function App() {

@@ -1,43 +1,14 @@
 // useState: tic tac toe
 // http://localhost:3000/isolated/exercise/04.js
 
+// TODO
+// - on click step, call setSquares(history[idx])
+// -
+
 import * as React from 'react'
+import useLocalStorageState from './useLocalStorageState'
 
-function Board() {
-  // 🐨 squares is the state for this component. Add useState for squares
-  const squares = Array(9).fill(null)
-
-  // 🐨 We'll need the following bits of derived state:
-  // - nextValue ('X' or 'O')
-  // - winner ('X', 'O', or null)
-  // - status (`Winner: ${winner}`, `Scratch: Cat's game`, or `Next player: ${nextValue}`)
-  // 💰 I've written the calculations for you! So you can use my utilities
-  // below to create these variables
-
-  // This is the function your square click handler will call. `square` should
-  // be an index. So if they click the center square, this will be `4`.
-  function selectSquare(square) {
-    // 🐨 first, if there's already winner or there's already a value at the
-    // given square index (like someone clicked a square that's already been
-    // clicked), then return early so we don't make any state changes
-    //
-    // 🦉 It's typically a bad idea to mutate or directly change state in React.
-    // Doing so can lead to subtle bugs that can easily slip into production.
-    //
-    // 🐨 make a copy of the squares array
-    // 💰 `[...squares]` will do it!)
-    //
-    // 🐨 set the value of the square that was selected
-    // 💰 `squaresCopy[square] = nextValue`
-    //
-    // 🐨 set the squares to your copy
-  }
-
-  function restart() {
-    // 🐨 reset the squares
-    // 💰 `Array(9).fill(null)` will do it!
-  }
-
+function Board({squares, selectSquare}) {
   function renderSquare(i) {
     return (
       <button className="square" onClick={() => selectSquare(i)}>
@@ -48,8 +19,6 @@ function Board() {
 
   return (
     <div>
-      {/* 🐨 put the status in the div below */}
-      <div className="status">STATUS</div>
       <div className="board-row">
         {renderSquare(0)}
         {renderSquare(1)}
@@ -65,39 +34,87 @@ function Board() {
         {renderSquare(7)}
         {renderSquare(8)}
       </div>
-      <button className="restart" onClick={restart}>
-        restart
-      </button>
     </div>
   )
 }
 
 function Game() {
+  const [history, setHistory] = useLocalStorageState('tic-tac-toe:history', [
+    Array(9).fill(null),
+  ])
+  const [currentStep, setCurrentStep] = useLocalStorageState(
+    'tic-tac-toe:step',
+    0,
+  )
+
+  const currentSquares = history[currentStep]
+  const nextValue = calculateNextValue(currentSquares)
+
+  const winner = calculateWinner(currentSquares)
+  const status = calculateStatus(winner, currentSquares, nextValue)
+
+  function selectSquare(square) {
+    if (winner || currentSquares[square]) {
+      return
+    }
+
+    const newHistory = history.slice(0, currentStep + 1)
+    const squaresCopy = [...currentSquares]
+
+    squaresCopy[square] = nextValue
+    setHistory([...newHistory, squaresCopy])
+    setCurrentStep(newHistory.length)
+  }
+
+  const moves = history.map(function (elem, idx) {
+    const desc = idx ? `Go to move #${idx}` : 'Go to game start'
+    const isCurrentStep = idx === currentStep
+    return (
+      <li key={idx}>
+        <button disabled={isCurrentStep} onClick={() => setCurrentStep(idx)}>
+          {desc} {isCurrentStep ? '(current)' : null}
+        </button>
+      </li>
+    )
+  })
+
+  function restart() {
+    setCurrentStep(0)
+    setHistory([Array(9).fill(null)])
+  }
+
   return (
     <div className="game">
       <div className="game-board">
-        <Board />
+        <Board selectSquare={selectSquare} squares={currentSquares} />
+        <button className="restart" onClick={restart}>
+          restart
+        </button>
+      </div>
+      <div className="game-info">
+        <div>{status}</div>
+        <ol>{moves}</ol>
       </div>
     </div>
   )
 }
 
 // eslint-disable-next-line no-unused-vars
-function calculateStatus(winner, squares, nextValue) {
+function calculateStatus(winner, currentSquares, nextValue) {
   return winner
     ? `Winner: ${winner}`
-    : squares.every(Boolean)
-    ? `Scratch: Cat's game`
+    : currentSquares.every(Boolean)
+    ? "Scratch: Cat's game"
     : `Next player: ${nextValue}`
 }
 
 // eslint-disable-next-line no-unused-vars
-function calculateNextValue(squares) {
-  return squares.filter(Boolean).length % 2 === 0 ? 'X' : 'O'
+function calculateNextValue(currentSquares) {
+  return currentSquares.filter(Boolean).length % 2 === 0 ? 'X' : 'O'
 }
 
 // eslint-disable-next-line no-unused-vars
-function calculateWinner(squares) {
+function calculateWinner(currentSquares) {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
@@ -110,8 +127,12 @@ function calculateWinner(squares) {
   ]
   for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i]
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a]
+    if (
+      currentSquares[a] &&
+      currentSquares[a] === currentSquares[b] &&
+      currentSquares[a] === currentSquares[c]
+    ) {
+      return currentSquares[a]
     }
   }
   return null
